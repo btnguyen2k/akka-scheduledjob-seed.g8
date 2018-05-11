@@ -1,0 +1,10 @@
+/target
+.DS_Store
+/.idea/
+/.settings/
+/bin/
+/temp/
+/.classpath
+/.project
+*.log
+
