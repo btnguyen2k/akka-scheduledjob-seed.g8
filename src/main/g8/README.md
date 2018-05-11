@@ -92,7 +92,8 @@ Stop the application with: `sh conf/server-prod.sh stop`
 **Docker Image**
 
 Docker image can be build in 2 ways:
-- Build Docker files with `sbt docker:stage`, generated files are placed under directory `target/docker`
+- Build Docker files with `sbt docker:stage`, generated files are placed under directory `target/docker`.
+Then docker image be build with command `docker build --force-rm --squash ./target/docker/stage`
 - Build Docker image and publish to local with `sbt docker:publishLocal`
 
 See more: http://www.scala-sbt.org/sbt-native-packager/formats/docker.html
