@@ -1,0 +1,20 @@
+<!-- for Development Env: Log everything to stdout -->
+<configuration>
+    <!-- Log messages to console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern><![CDATA[%date{yyyy-MM-dd HH:mm:ss.SSSZ} [%level] %logger - %message%n%xException]]></pattern>
+        </encoder>
+    </appender>
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </root>
+    
+    <logger name="gearman" level="WARN" />
+    <logger name="job-handler" level="DEBUG" />
+</configuration>

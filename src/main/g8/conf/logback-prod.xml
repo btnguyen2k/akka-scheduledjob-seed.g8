@@ -1,0 +1,44 @@
+<!-- for Production Env: log everything to log files, rolling each file per day -->
+<configuration>
+    <!-- Log messages to file -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file><![CDATA[${app.logdir:-.}/application.log]]></file>
+        <append>true</append>
+        <encoder>
+            <pattern><![CDATA[%date{yyyy-MM-dd HH:mm:ss.SSSZ} [%level] %logger - %message%n%xException]]></pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern><![CDATA[${app.logdir:-.}/application.log.%d{yyyy-MM-dd}]]></fileNamePattern>
+        </rollingPolicy>
+    </appender>
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE" />
+    </appender>
+    
+    <!-- Log messages to file -->
+    <appender name="FILE_JOB_HANDLER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file><![CDATA[${app.logdir:-.}/job.log]]></file>
+        <append>true</append>
+        <encoder>
+            <pattern><![CDATA[%date{yyyy-MM-dd HH:mm:ss.SSSZ}\t%message%n]]></pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern><![CDATA[${app.logdir:-.}/job.log.%d{yyyy-MM-dd}]]></fileNamePattern>
+        </rollingPolicy>
+    </appender>
+    <appender name="ASYNC_FILE_JOB_HANDLER" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE_JOB_HANDLER" />
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_FILE" />
+    </root>
+    
+    <logger name="gearman" level="WARN" />
+    
+    <logger name="job-handler" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_FILE_JOB_HANDLER" />
+    </logger>
+</configuration>
