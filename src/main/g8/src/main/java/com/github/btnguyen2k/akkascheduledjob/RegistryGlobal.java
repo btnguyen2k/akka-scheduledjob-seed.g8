@@ -140,6 +140,7 @@ public class RegistryGlobal {
         return actorSystem;
     }
 
+    @SuppressWarnings("resource")
     private static IDLockFactory buildDlockFactory(Config config) {
         String type = TypesafeConfigUtils
                 .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.type").orElse(null);
@@ -164,10 +165,11 @@ public class RegistryGlobal {
         return dLockFactory;
     }
 
+    @SuppressWarnings("resource")
     private static IQueue<?, byte[]> buildQueue(Config config) {
         String type = TypesafeConfigUtils
                 .getStringOptional(config, "ddth-akka-scheduling.queue-backend.type").orElse(null);
-        AbstractQueueFactory queueFactory;
+        AbstractQueueFactory<?, ?, byte[]> queueFactory;
         if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
             String redisHostAndPort = TypesafeConfigUtils.getStringOptional(config,
                     "ddth-akka-scheduling.queue-backend.redis-host-and-port")
