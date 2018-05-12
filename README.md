@@ -8,7 +8,7 @@ To create a new project from template:
 sbt new btnguyen2k/akka-scheduledjob-seed.g8
 ```
 
-Latest release: [template-v0.1.0](RELEASE-NOTES.md).
+Latest release: [template-v0.1.1](RELEASE-NOTES.md).
 
 ## Features
 
@@ -18,13 +18,13 @@ Latest release: [template-v0.1.0](RELEASE-NOTES.md).
   - `sbt universal:packageBin`: package project as a `.zip` file
   - `sbt docker:publishLocal`: package project as docker image and publish to local
 - Support multi-node mode (require Redis server)
+- Bootstrappers (since [template-v0.1.1](RELEASE-NOTES.md)).
+- Built-in bootstrapper to bootstrap `javax.sql.DataSource` (see [`com.github.btnguyen2k.akkascheduledjob.bootstrap.DataSourcesBootstrapper`](src/main/java/com/github/btnguyen2k/akkascheduledjob/bootstrap/DataSourcesBootstrapper.java)
 - Samples worker implementations (see [`com.github.btnguyen2k.akkascheduledjob.samples`](src/main/java/com/github/btnguyen2k/akkascheduledjob/samples)
 
 ## Configurations
 
 Application's main configuration file `conf/application.conf` in [HOCON format](https://github.com/lightbend/config/blob/master/HOCON.md).
-
-Important configurations:
 
 ```
 ## Application name and version
@@ -34,6 +34,32 @@ app {
     shortname = "app_short_name"
     fullname  = ${app.name} ${app.version}
     desc      = "Application description, free text"
+}
+```
+
+```
+## Declare bootstrappers to perform application's initializing tasks.
+## Bootstrapper must implement Runnable interface.
+bootstrappers = [
+    com.github.btnguyen2k.akkascheduledjob.bootstrap.DataSourcesBootstrapper
+]
+```
+
+```
+## Datasource configurations
+datasources {
+    # Name of the datasource, in this case it's "default"
+    default {
+        jdbc-url      = "${JDBC_URL}"
+        jdbc-username = "${JDBC_USERNAME}"
+        jdbc-password = "${JDBC_PASSWORD}"
+    }
+    # Another datasource
+    my-log-datasource {
+        jdbc-url      = "jdbc:mysql://localhost:3306/test"
+        jdbc-username = "test"
+        jdbc-password = "test"
+    }
 }
 ```
 

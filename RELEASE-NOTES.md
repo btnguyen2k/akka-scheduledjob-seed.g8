@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2018-05-12: template-v0.1.1
+
+- Add `RegistryGlobal`
+- Add bootstrapper
+- Built-in bootstrapper to bootstrap datasource (`DataSourcesBootstrapper`)
+- Bug fixes and enhancements
+
+
 ## 2018-05-11: template-v0.1.0
 
 First release:

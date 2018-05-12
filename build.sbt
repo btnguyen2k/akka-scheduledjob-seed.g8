@@ -64,11 +64,13 @@ val _ddthQueueVersion   = "0.6.2.6"
 val _akkaVersion        = "2.5.12"
 
 libraryDependencies ++= Seq(
-    "com.typesafe.akka"         %% "akka-actor"                   % _akkaVersion
+    "com.typesafe.akka"          %% "akka-actor"                  % _akkaVersion
 
    ,"org.slf4j"                  % "slf4j-api"                    % _slf4jVersion
    ,"org.slf4j"                  % "log4j-over-slf4j"             % _slf4jVersion
    ,"ch.qos.logback"             % "logback-classic"              % "1.2.3"
+
+   ,"com.zaxxer"                 % "HikariCP"                     % "3.1.0"
    
    ,"org.apache.commons"         % "commons-lang3"                % "3.7"
    ,"io.undertow"                % "undertow-core"                % "2.0.6.Final"
