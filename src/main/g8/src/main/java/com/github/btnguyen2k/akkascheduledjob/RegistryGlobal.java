@@ -42,7 +42,8 @@ public class RegistryGlobal {
     private final static Stack<Runnable> shutdownHooks = new Stack<>();
 
     /**
-     * Add a shutdown hook, which to be called right before application's shutdown.
+     * Add a shutdown hook, which to be called right before application's
+     * shutdown.
      *
      * @param r
      */
@@ -59,7 +60,7 @@ public class RegistryGlobal {
      *
      * @param key
      * @return the previous value associated with {@code key}, or {@code null}
-     * if there was no mapping for {@code key}.
+     *         if there was no mapping for {@code key}.
      */
     public static Object removeFromGlobalStorage(String key) {
         return globalStorage.remove(key);
@@ -71,7 +72,7 @@ public class RegistryGlobal {
      * @param key
      * @param value
      * @return the previous value associated with {@code key}, or {@code null}
-     * if there was no mapping for {@code key}.
+     *         if there was no mapping for {@code key}.
      */
     public static Object putToGlobalStorage(String key, Object value) {
         if (value == null) {
@@ -147,8 +148,9 @@ public class RegistryGlobal {
                 .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.type").orElse(null);
         AbstractDLockFactory dLockFactory;
         if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-            String redisHostAndPort = TypesafeConfigUtils.getStringOptional(config,
-                    "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
+            String redisHostAndPort = TypesafeConfigUtils
+                    .getStringOptional(config,
+                            "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
                     .orElse("localhost:6379");
             String redisPassword = TypesafeConfigUtils
                     .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.redis-password")
@@ -172,8 +174,9 @@ public class RegistryGlobal {
                 .getStringOptional(config, "ddth-akka-scheduling.queue-backend.type").orElse(null);
         AbstractQueueFactory<?, ?, byte[]> queueFactory;
         if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-            String redisHostAndPort = TypesafeConfigUtils.getStringOptional(config,
-                    "ddth-akka-scheduling.queue-backend.redis-host-and-port")
+            String redisHostAndPort = TypesafeConfigUtils
+                    .getStringOptional(config,
+                            "ddth-akka-scheduling.queue-backend.redis-host-and-port")
                     .orElse("localhost:6379");
             String redisPassword = TypesafeConfigUtils
                     .getStringOptional(config, "ddth-akka-scheduling.queue-backend.redis-password")
@@ -221,10 +224,10 @@ public class RegistryGlobal {
                 .orElse(Boolean.FALSE).booleanValue();
         ActorRef tickFanOut;
         if (!isMultiNodeMode) {
-            //single-node mode
+            // single-node mode
             tickFanOut = SingleNodeTickFanOutActor.newInstance(actorSystem);
         } else {
-            //multi-node mode
+            // multi-node mode
             IDLockFactory dlockFactory = buildDlockFactory(config);
             String dlockName = TypesafeConfigUtils
                     .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.lock-name")
@@ -242,8 +245,8 @@ public class RegistryGlobal {
                     .getLongOptional(config, "ddth-akka-scheduling.dlock-time-ms")
                     .orElse(MultiNodeQueueBasedTickFanOutActor.DEFAULT_DLOCK_TIME_MS).longValue();
 
-            tickFanOut = MultiNodeQueueBasedTickFanOutActor
-                    .newInstance(actorSystem, dlock, queue, queuePollSleepMs, dlockTimeMs);
+            tickFanOut = MultiNodeQueueBasedTickFanOutActor.newInstance(actorSystem, dlock, queue,
+                    queuePollSleepMs, dlockTimeMs);
         }
         LOGGER.info("Tick fan-out: " + tickFanOut);
         addShutdownHook(() -> actorSystem.stop(tickFanOut));
@@ -266,11 +269,12 @@ public class RegistryGlobal {
                         LOGGER.info("Bootstrapping [" + className + "]...");
                         ((Runnable) clazz.newInstance()).run();
                     } else {
-                        LOGGER.warn(
-                                "Bootstrapper [" + className + "] must implement [" + Runnable.class
-                                        + "]!");
+                        LOGGER.warn("Bootstrapper [" + className + "] must implement ["
+                                + Runnable.class + "]!");
                     }
-                } catch (Exception e) {
+                } catch (ClassNotFoundException cnfe) {
+                    LOGGER.error("Error: Class [" + className + "] not found!", cnfe);
+                } catch (IllegalAccessException | InstantiationException e) {
                     LOGGER.error(e.getMessage(), e);
                     throw new RuntimeException(e);
                 }
@@ -296,8 +300,8 @@ public class RegistryGlobal {
                 try {
                     Props props = Props.create(Class.forName(clazz));
                     LOGGER.info("Created worker " + actorSystem.actorOf(props));
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
+                } catch (ClassNotFoundException cnfe) {
+                    LOGGER.error("Error: Class [" + clazz + "] not found!", cnfe);
                 }
             }
         } else {
