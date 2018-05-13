@@ -96,7 +96,7 @@ public class DataSourcesBootstrapper implements Runnable {
             confDataSources.entrySet().forEach(entry -> {
                 String dsName = entry.getKey().toString();
                 Object dsConf = entry.getValue();
-                dataSources.put("datasources." + dsName, buildDataSource(dsName, dsConf));
+                dataSources.put(dsName, buildDataSource(dsName, dsConf));
             });
             RegistryGlobal.putToGlobalStorage("datasources", dataSources);
         } else {
