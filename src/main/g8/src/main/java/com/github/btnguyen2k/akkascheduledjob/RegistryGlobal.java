@@ -58,11 +58,9 @@ public class RegistryGlobal {
      * Remove an item from application's global storage.
      *
      * @param key
-     * @return the previous value associated with {@code key}, or
-     * {@code null} if there was no mapping for {@code key}.
      */
-    public static Object removeFromGlobalStorage(String key) {
-        return globalStorage.remove(key);
+    public static void removeFromGlobalStorage(String key) {
+        DPathUtils.deleteValue(globalStorage, key);
     }
 
     /**
@@ -70,14 +68,12 @@ public class RegistryGlobal {
      *
      * @param key
      * @param value
-     * @return the previous value associated with {@code key}, or
-     * {@code null} if there was no mapping for {@code key}.
      */
-    public static Object putToGlobalStorage(String key, Object value) {
+    public static void putToGlobalStorage(String key, Object value) {
         if (value == null) {
-            return removeFromGlobalStorage(key);
+            removeFromGlobalStorage(key);
         } else {
-            return globalStorage.put(key, value);
+            DPathUtils.setValue(globalStorage, key, value);
         }
     }
 
@@ -88,7 +84,7 @@ public class RegistryGlobal {
      * @return
      */
     public static Object getFromGlobalStorage(String key) {
-        return globalStorage.get(key);
+        return DPathUtils.getValue(globalStorage, key);
     }
 
     /**
