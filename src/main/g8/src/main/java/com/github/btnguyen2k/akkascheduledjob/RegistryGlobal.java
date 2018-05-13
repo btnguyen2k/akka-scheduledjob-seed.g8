@@ -6,8 +6,8 @@ import akka.actor.Props;
 import com.github.ddth.akka.AkkaUtils;
 import com.github.ddth.akka.scheduling.tickfanout.MultiNodeQueueBasedTickFanOutActor;
 import com.github.ddth.akka.scheduling.tickfanout.SingleNodeTickFanOutActor;
-import com.github.ddth.commons.utils.DPathUtils;
 import com.github.ddth.commons.utils.TypesafeConfigUtils;
+import com.github.ddth.commons.utils.ValueUtils;
 import com.github.ddth.dlock.IDLock;
 import com.github.ddth.dlock.IDLockFactory;
 import com.github.ddth.dlock.impl.AbstractDLockFactory;
@@ -58,9 +58,11 @@ public class RegistryGlobal {
      * Remove an item from application's global storage.
      *
      * @param key
+     * @return the previous value associated with {@code key}, or {@code null}
+     * if there was no mapping for {@code key}.
      */
-    public static void removeFromGlobalStorage(String key) {
-        DPathUtils.deleteValue(globalStorage, key);
+    public static Object removeFromGlobalStorage(String key) {
+        return globalStorage.remove(key);
     }
 
     /**
@@ -68,12 +70,14 @@ public class RegistryGlobal {
      *
      * @param key
      * @param value
+     * @return the previous value associated with {@code key}, or {@code null}
+     * if there was no mapping for {@code key}.
      */
-    public static void putToGlobalStorage(String key, Object value) {
+    public static Object putToGlobalStorage(String key, Object value) {
         if (value == null) {
-            removeFromGlobalStorage(key);
+            return removeFromGlobalStorage(key);
         } else {
-            DPathUtils.setValue(globalStorage, key, value);
+            return globalStorage.put(key, value);
         }
     }
 
@@ -84,7 +88,7 @@ public class RegistryGlobal {
      * @return
      */
     public static Object getFromGlobalStorage(String key) {
-        return DPathUtils.getValue(globalStorage, key);
+        return globalStorage.get(key);
     }
 
     /**
@@ -96,7 +100,8 @@ public class RegistryGlobal {
      * @return
      */
     public static <T> T getFromGlobalStorage(String key, Class<T> clazz) {
-        return DPathUtils.getValue(globalStorage, key, clazz);
+        Object value = getFromGlobalStorage(key);
+        return ValueUtils.convertValue(value, clazz);
     }
 
     /*----------------------------------------------------------------------*/
