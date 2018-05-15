@@ -29,6 +29,11 @@ APP_LOGBACK=\$DEFAULT_APP_LOGBACK
 
 doStart() {
     preStart
+    
+    # Fetch JVM memory limit setting from env.JVM_MEM
+    if [ "$JVM_MEM" != "" ]; then
+        APP_MEM=$JVM_MEM
+    fi
 
     RUN_CMD=(\$APP_HOME/bin/\$APP_NAME -Dapp.home=\$APP_HOME -Dapp.logdir=\$APP_LOGDIR)
     if [ "\$APP_PROXY_HOST" != "" -a "\$APP_PROXY_PORT" != "0" ]; then

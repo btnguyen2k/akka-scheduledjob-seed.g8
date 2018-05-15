@@ -4,18 +4,20 @@ val conf       = ConfigFactory.parseFile(new File("conf/application.conf")).reso
 val appName    = conf.getString("app.name").toLowerCase().replaceAll("\\W+", "-")
 val appVersion = conf.getString("app.version")
 
+// Custom Maven repository
+resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/"
+
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlugin).settings(
     name      := appName,
-    version   := appVersion,
-    //scriptedLaunchOpts ++= List("-Xms1024m", "-Xmx1024m", "-XX:ReservedCodeCacheSize=128m", "-XX:MaxPermSize=256m", "-Xss2m", "-Dfile.encoding=UTF-8"),
-    resolvers += Resolver.url("typesafe", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns)
+    version   := appVersion
+    //scriptedLaunchOpts ++= List("-Xms1024m", "-Xmx1024m", "-XX:ReservedCodeCacheSize=128m", "-XX:MaxPermSize=256m", "-Xss2m", "-Dfile.encoding=UTF-8")
 )
 
 /*----------------------------------------------------------------------*/
 // Convenient settings: mostly copied from src/g8/build.sbt
 /*----------------------------------------------------------------------*/
 
-fork := true
+fork := false
 
 val _mainClass = "com.github.btnguyen2k.akkascheduledjob.Bootstrap"
 
@@ -32,19 +34,19 @@ mappings in Universal                    ++= (baseDirectory.value / "conf" * "*"
 dockerCommands := Seq()
 import com.typesafe.sbt.packager.docker._
 dockerCommands := Seq(
-    Cmd("FROM", "openjdk:8-jre-alpine"),
-    //Cmd("LABEL", "maintainer=\"$app_author$\""),
-    Cmd("ADD", "opt /opt"),
-    Cmd("RUN", "apk add --no-cache bash && ln -s /opt/docker /opt/" + appName + " && chown -R daemon:daemon /opt"),	
-    Cmd("WORKDIR", "/opt/" + appName),
-    Cmd("USER", "daemon"),
+    Cmd("FROM"          , "openjdk:8-jre-alpine"),
+    Cmd("ADD"           , "opt /opt"),
+    Cmd("RUN"           , "apk add --no-cache -U tzdata bash && ln -s /opt/docker /opt/" + appName + " && chown -R daemon:daemon /opt"),	
+    Cmd("RUN"           , "cp /usr/share/zoneinfo/$timezone$ /etc/localtime"),
+    Cmd("WORKDIR"       , "/opt/" + appName),
+    Cmd("USER"          , "daemon"),
     ExecCmd("ENTRYPOINT", "./bin/" + appName)
 )
 packageName in Docker                 := appName
 version in Docker                     := appVersion
 
 /* Compiling  options */
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-encoding", "UTF-8")
 
 /* Run options */
 javaOptions  ++= collection.JavaConverters.propertiesAsScalaMap(System.getProperties)
