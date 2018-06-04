@@ -41,7 +41,6 @@ dockerCommands := Seq(
     Cmd("WORKDIR"       , "/opt/" + appName),
     Cmd("USER"          , "daemon"),
     ExecCmd("ENTRYPOINT", "./conf/server-docker.sh", "start")
-    //Cmd("CMD"         , "./conf/server-docker.sh start")
 )
 packageName in Docker                 := appName
 version in Docker                     := appVersion
@@ -60,10 +59,10 @@ EclipseKeys.executionEnvironment         := Some(EclipseExecutionEnvironment.Jav
 
 /* Dependencies */
 val _slf4jVersion       = "1.7.25"
-val _ddthCommonsVersion = "0.9.1.3"
-val _ddthAkkaVersion    = "0.1.0.1"
+val _ddthCommonsVersion = "0.9.1.4"
+val _ddthAkkaVersion    = "0.1.1.2"
 val _ddthDlockVersion   = "0.1.1.2"
-val _ddthQueueVersion   = "0.6.2.6"
+val _ddthQueueVersion   = "0.7.1"
 val _akkaVersion        = "2.5.12"
 
 libraryDependencies ++= Seq(

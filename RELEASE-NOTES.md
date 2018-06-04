@@ -1,5 +1,11 @@
 # Release Notes
 
+## 2018-06-04: template-v0.1.2
+
+- Migrate to `ddth-akka:0.1.1.2`.
+- Add more sample workers: `TakeAllTasksWorker`, `LocalSingletonWorker`, `GlobalSingletonWorker`
+
+
 ## 2018-05-12: template-v0.1.1
 
 - Add `RegistryGlobal`

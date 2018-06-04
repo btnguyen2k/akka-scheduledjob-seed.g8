@@ -1,10 +1,19 @@
 package com.github.btnguyen2k.akkascheduledjob;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
+import java.lang.reflect.Constructor;
+import java.util.Collections;
+import java.util.List;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.ddth.akka.AkkaUtils;
-import com.github.ddth.akka.scheduling.tickfanout.MultiNodeQueueBasedTickFanOutActor;
+import com.github.ddth.akka.scheduling.tickfanout.MultiNodePubSubBasedTickFanOutActor;
 import com.github.ddth.akka.scheduling.tickfanout.SingleNodeTickFanOutActor;
 import com.github.ddth.commons.utils.TypesafeConfigUtils;
 import com.github.ddth.commons.utils.ValueUtils;
@@ -13,22 +22,15 @@ import com.github.ddth.dlock.IDLockFactory;
 import com.github.ddth.dlock.impl.AbstractDLockFactory;
 import com.github.ddth.dlock.impl.inmem.InmemDLockFactory;
 import com.github.ddth.dlock.impl.redis.RedisDLockFactory;
-import com.github.ddth.queue.IQueue;
-import com.github.ddth.queue.QueueSpec;
-import com.github.ddth.queue.impl.AbstractQueueFactory;
-import com.github.ddth.queue.impl.BaseRedisQueueFactory;
-import com.github.ddth.queue.impl.universal.idint.UniversalInmemQueueFactory;
-import com.github.ddth.queue.impl.universal.idint.UniversalRedisQueueFactory;
+import com.github.ddth.pubsub.IPubSubHub;
+import com.github.ddth.pubsub.impl.AbstractPubSubHub;
+import com.github.ddth.pubsub.impl.universal.idint.UniversalInmemPubSubHub;
+import com.github.ddth.pubsub.impl.universal.idint.UniversalRedisPubSubHub;
 import com.typesafe.config.Config;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 
 /**
  * Application's global registry.
@@ -144,68 +146,69 @@ public class RegistryGlobal {
 
     @SuppressWarnings("resource")
     private static IDLockFactory buildDlockFactory(Config config) {
-        String type = TypesafeConfigUtils
-                .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.type").orElse(null);
-        AbstractDLockFactory dLockFactory;
-        if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-            String redisHostAndPort = TypesafeConfigUtils
-                    .getStringOptional(config,
-                            "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
-                    .orElse("localhost:6379");
-            String redisPassword = TypesafeConfigUtils
-                    .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.redis-password")
+        IDLockFactory dlockFactory = getFromGlobalStorage("dlock-factory", IDLockFactory.class);
+        if (dlockFactory == null) {
+            String dlockPrefix = TypesafeConfigUtils
+                    .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.lock-prefix")
+                    .orElse(TypesafeConfigUtils.getString(config, "app.shortname"));
+            AbstractDLockFactory factory;
+            String type = TypesafeConfigUtils
+                    .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.type")
                     .orElse(null);
-            LOGGER.info("Creating Redis dlock factory [" + redisHostAndPort + "]...");
-            dLockFactory = new RedisDLockFactory().setRedisHostAndPort(redisHostAndPort)
-                    .setRedisPassword(redisPassword);
-            dLockFactory.init();
-        } else {
-            LOGGER.info("Creating in-memory dlock factory...");
-            dLockFactory = new InmemDLockFactory();
-            dLockFactory.init();
+            if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
+                String redisHostAndPort = TypesafeConfigUtils
+                        .getStringOptional(config,
+                                "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
+                        .orElse("localhost:6379");
+                String redisPassword = TypesafeConfigUtils.getStringOptional(config,
+                        "ddth-akka-scheduling.dlock-backend.redis-password").orElse(null);
+                LOGGER.info("Creating Redis dlock factory [" + redisHostAndPort + "]...");
+                factory = new RedisDLockFactory().setRedisHostAndPort(redisHostAndPort)
+                        .setRedisPassword(redisPassword).setLockNamePrefix(dlockPrefix).init();
+            } else {
+                LOGGER.info("Creating in-memory dlock factory...");
+                factory = new InmemDLockFactory().setLockNamePrefix(dlockPrefix).init();
+            }
+            addShutdownHook(() -> factory.destroy());
+            putToGlobalStorage("dlock-factory", factory);
+            dlockFactory = factory;
         }
-        addShutdownHook(() -> dLockFactory.destroy());
-        return dLockFactory;
+        return dlockFactory;
     }
 
-    @SuppressWarnings("resource")
-    private static IQueue<?, byte[]> buildQueue(Config config) {
-        String type = TypesafeConfigUtils
-                .getStringOptional(config, "ddth-akka-scheduling.queue-backend.type").orElse(null);
-        AbstractQueueFactory<?, ?, byte[]> queueFactory;
-        if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-            String redisHostAndPort = TypesafeConfigUtils
-                    .getStringOptional(config,
-                            "ddth-akka-scheduling.queue-backend.redis-host-and-port")
-                    .orElse("localhost:6379");
-            String redisPassword = TypesafeConfigUtils
-                    .getStringOptional(config, "ddth-akka-scheduling.queue-backend.redis-password")
+    /**
+     * 
+     * @param config
+     * @return
+     * @since 0.1.2
+     */
+    @SuppressWarnings({ "resource", "unchecked" })
+    private static IPubSubHub<?, byte[]> buildPubSubHub(Config config) {
+        IPubSubHub<?, byte[]> pubSubHub = getFromGlobalStorage("pubsub-hub", IPubSubHub.class);
+        if (pubSubHub == null) {
+            String type = TypesafeConfigUtils
+                    .getStringOptional(config, "ddth-akka-scheduling.pubsub-backend.type")
                     .orElse(null);
-            LOGGER.info("Creating Redis queue factory [" + redisHostAndPort + "]...");
-            UniversalRedisQueueFactory qFactory = new UniversalRedisQueueFactory();
-            qFactory.setDefaultHostAndPort(redisHostAndPort);
-            qFactory.setDefaultPassword(redisPassword);
-            qFactory.init();
-            queueFactory = qFactory;
-        } else {
-            LOGGER.info("Creating in-memory queue factory...");
-            queueFactory = new UniversalInmemQueueFactory();
-            queueFactory.init();
+            AbstractPubSubHub<?, byte[]> hub;
+            if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
+                String redisHostAndPort = TypesafeConfigUtils
+                        .getStringOptional(config,
+                                "ddth-akka-scheduling.pubsub-backend.redis-host-and-port")
+                        .orElse("localhost:6379");
+                String redisPassword = TypesafeConfigUtils.getStringOptional(config,
+                        "ddth-akka-scheduling.pubsub-backend.redis-password").orElse(null);
+                LOGGER.info("Creating Redis pub/sub hub [" + redisHostAndPort + "]...");
+                hub = new UniversalRedisPubSubHub().setRedisHostAndPort(redisHostAndPort)
+                        .setRedisPassword(redisPassword).init();
+            } else {
+                LOGGER.info("Creating in-memory queue factory...");
+                hub = new UniversalInmemPubSubHub().init();
+            }
+            addShutdownHook(() -> hub.destroy());
+            putToGlobalStorage("pubsub-hub", hub);
+            pubSubHub = hub;
         }
-        addShutdownHook(() -> queueFactory.destroy());
-
-        String queueName = TypesafeConfigUtils
-                .getStringOptional(config, "ddth-akka-scheduling.queue-backend.queue-name")
-                .orElse("akka-scheduled-jobs");
-        LOGGER.info("Creating queue instance [" + queueName + "]...");
-        QueueSpec spec = new QueueSpec(queueName);
-        spec.setField(QueueSpec.FIELD_EPHEMERAL_DISABLED, true);
-        if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-            spec.setField(BaseRedisQueueFactory.SPEC_FIELD_HASH_NAME, queueName + "_h")
-                    .setField(BaseRedisQueueFactory.SPEC_FIELD_LIST_NAME, queueName + "_l")
-                    .setField(BaseRedisQueueFactory.SPEC_FIELD_SORTED_SET_NAME, queueName + "_s");
-        }
-        return queueFactory.getQueue(spec);
+        return pubSubHub;
     }
 
     /**
@@ -218,7 +221,6 @@ public class RegistryGlobal {
         if (!config.hasPath("ddth-akka-scheduling")) {
             throw new RuntimeException("No configuration [ddth-akka-scheduling] found!");
         }
-
         boolean isMultiNodeMode = TypesafeConfigUtils
                 .getBooleanOptional(config, "ddth-akka-scheduling.multi-node-mode")
                 .orElse(Boolean.FALSE).booleanValue();
@@ -235,18 +237,17 @@ public class RegistryGlobal {
             LOGGER.info("Creating dlock instance [" + dlockName + "]...");
             IDLock dlock = dlockFactory.createLock(dlockName);
 
-            IQueue<?, byte[]> queue = buildQueue(config);
-
-            long queuePollSleepMs = TypesafeConfigUtils
-                    .getLongOptional(config, "ddth-akka-scheduling.queue-poll-sleep-ms")
-                    .orElse(MultiNodeQueueBasedTickFanOutActor.DEFAULT_QUEUE_POLL_SLEEP_MS)
-                    .longValue();
             long dlockTimeMs = TypesafeConfigUtils
                     .getLongOptional(config, "ddth-akka-scheduling.dlock-time-ms")
-                    .orElse(MultiNodeQueueBasedTickFanOutActor.DEFAULT_DLOCK_TIME_MS).longValue();
+                    .orElse(MultiNodePubSubBasedTickFanOutActor.DEFAULT_DLOCK_TIME_MS).longValue();
 
-            tickFanOut = MultiNodeQueueBasedTickFanOutActor.newInstance(actorSystem, dlock, queue,
-                    queuePollSleepMs, dlockTimeMs);
+            IPubSubHub<?, byte[]> pubSubHub = buildPubSubHub(config);
+            String channelName = TypesafeConfigUtils
+                    .getStringOptional(config, "ddth-akka-scheduling.pubsub-backend.channel-name")
+                    .orElse("akka-scheduled-jobs");
+
+            tickFanOut = MultiNodePubSubBasedTickFanOutActor.newInstance(actorSystem, dlock,
+                    dlockTimeMs, pubSubHub, channelName);
         }
         LOGGER.info("Tick fan-out: " + tickFanOut);
         addShutdownHook(() -> actorSystem.stop(tickFanOut));
@@ -285,6 +286,14 @@ public class RegistryGlobal {
         }
     }
 
+    private static Constructor<?> getConstructor(Class<?> clazz, Class<?>... parameterTypes) {
+        try {
+            return clazz.getConstructor(parameterTypes);
+        } catch (NoSuchMethodException | SecurityException e) {
+            return null;
+        }
+    }
+
     /**
      * Initialize workers.
      *
@@ -296,12 +305,36 @@ public class RegistryGlobal {
                 .getStringListOptional(config, "ddth-akka-scheduling.workers")
                 .orElse(Collections.emptyList());
         if (workerClazzs != null && workerClazzs.size() != 0) {
-            for (String clazz : workerClazzs) {
+            IDLockFactory dlockFactory = buildDlockFactory(config);
+            for (String cl : workerClazzs) {
+                String[] tokens = cl.trim().split("[,; ]+");
+                String clazzName = tokens[0];
+                String actorName = tokens.length > 1 ? tokens[1] : null;
+                String dlockName = tokens.length > 2 ? tokens[2] : null;
+                String dlockTimeMsStr = tokens.length > 3 ? tokens[3] : null;
                 try {
-                    Props props = Props.create(Class.forName(clazz));
-                    LOGGER.info("Created worker " + actorSystem.actorOf(props));
+                    Class<?> clazz = Class.forName(clazzName);
+                    Props props = null;
+                    Constructor<?> constructor = getConstructor(clazz, IDLock.class, Long.class);
+                    if (constructor == null) {
+                        constructor = getConstructor(clazz, IDLock.class, long.class);
+                    }
+                    if (constructor != null) {
+                        IDLock dlock = dlockFactory != null && !StringUtils.isBlank(dlockName)
+                                ? dlockFactory.createLock(dlockName) : null;
+                        long dlockTimeMs = NumberUtils.toLong(dlockTimeMsStr,
+                                IDLock.DEFAULT_LOCK_DURATION_MS);
+                        props = Props.create(clazz, dlock, dlockTimeMs);
+                    } else {
+                        props = Props.create(clazz);
+                    }
+                    if (StringUtils.isBlank(actorName)) {
+                        LOGGER.info("Created worker " + actorSystem.actorOf(props));
+                    } else {
+                        LOGGER.info("Created worker " + actorSystem.actorOf(props, actorName));
+                    }
                 } catch (ClassNotFoundException cnfe) {
-                    LOGGER.error("Error: Class [" + clazz + "] not found!", cnfe);
+                    LOGGER.error("Error: Class [" + cl + "] not found!", cnfe);
                 }
             }
         } else {

@@ -8,7 +8,7 @@ To create a new project from template:
 sbt new btnguyen2k/akka-scheduledjob-seed.g8
 ```
 
-Latest release: [template-v0.1.1](RELEASE-NOTES.md).
+Latest release: [template-v0.1.2](RELEASE-NOTES.md).
 
 ## Features
 
@@ -72,32 +72,32 @@ ddth-akka-scheduling {
     # multi-node mode: d-lock time in milliseconds
     dlock-time-ms       = 5000
 
-    # multi-node mode: sleep time between queue poll in milliseconds
-    queue-poll-sleep-ms = 1000
-
     # used in multi-mode only
     dlock-backend {
-        # either "local" or "redis", "local" type has no more settings
+        # either "local" or "redis"
         type                = "redis"
-        lock-name           = "akka-scheduled-job"
+        lock-prefix         = ${app.shortname}
+        lock-name           = "tick-fan-out"
         # redis settings
         redis-host-and-port = "localhost:6379"
         redis-password      = ""
     }
 
     # used in multi-mode only
-    queue-backend {
-        # either "local" or "redis", "local" type has no more settings
+    pubsub-backend {
+        # either "local" or "redis"
         type                = "redis"
-        queue-name          = "akka-scheduled-job"
+        channel-name        = ${app.shortname}
         # redis settings
         redis-host-and-port = "localhost:6379"
         redis-password      = ""
     }
 
-    # list of workers, fully qualified class names
+    # list of workers, format: <fully-qualified-class-name>[;actor-name;dlock-name;dlock-time-ms]
     workers = [
-        com.github.btnguyen2k.akkascheduledjob.samples.DummyWorker
+        com.github.btnguyen2k.akkascheduledjob.samples.TakeAllTasksWorker;TakeAllTasks
+        com.github.btnguyen2k.akkascheduledjob.samples.LocalSingletonWorker;LocalSingletonWorker
+        com.github.btnguyen2k.akkascheduledjob.samples.GlobalSingletonWorker;GlobalSingletonWorker;GlobalSingletonWorker;5000
     ]
 }
 ```

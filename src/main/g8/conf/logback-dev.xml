@@ -4,7 +4,7 @@
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.out</target>
         <encoder>
-            <pattern><![CDATA[%date{yyyy-MM-dd HH:mm:ss.SSSZ} [%level] %logger - %message%n%xException]]></pattern>
+            <pattern><![CDATA[%date{HH:mm:ss.SSSZ} [%level]: %message%n%xException]]></pattern>
         </encoder>
     </appender>
     <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
