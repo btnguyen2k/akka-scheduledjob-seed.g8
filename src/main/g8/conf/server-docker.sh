@@ -31,8 +31,8 @@ doStart() {
     preStart
     
     # Fetch JVM memory limit setting from env.JVM_MEM
-    if [ "$JVM_MEM" != "" ]; then
-        APP_MEM=$JVM_MEM
+    if [ "\$JVM_MEM" != "" ]; then
+        APP_MEM=\$JVM_MEM
     fi
 
     RUN_CMD=(\$APP_HOME/bin/\$APP_NAME -Dapp.home=\$APP_HOME -Dapp.logdir=\$APP_LOGDIR)
