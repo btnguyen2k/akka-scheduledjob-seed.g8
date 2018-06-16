@@ -25,7 +25,6 @@ import com.github.ddth.akka.scheduling.annotation.Scheduling;
 
 @Scheduling(value = "*/5 * *", workerCoordinationPolicy = WorkerCoordinationPolicy.GLOBAL_SINGLETON)
 public class GlobalSingletonWorker extends BaseWorker {
-
     private final Logger LOGGER = LoggerFactory.getLogger(GlobalSingletonWorker.class);
     private final Random RAND = new Random(System.currentTimeMillis());
 
@@ -54,7 +53,7 @@ public class GlobalSingletonWorker extends BaseWorker {
             long numExec = COUNTER_EXEC.incrementAndGet();
             long numBusy = COUNTER_BUSY.get();
             long numTotal = numBusy + numExec;
-            LOGGER.info("\t{" + getActorPath().name() + "} " + numExec + " / " + numBusy + " / "
+            LOGGER.info("{" + getActorPath().name() + "} " + numExec + " / " + numBusy + " / "
                     + Math.round(numExec * 100.0 / numTotal));
 
             int sleepMs = 1400 + RAND.nextInt(1000);

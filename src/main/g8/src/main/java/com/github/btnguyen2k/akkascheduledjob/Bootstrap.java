@@ -1,13 +1,14 @@
 package com.github.btnguyen2k.akkascheduledjob;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigResolveOptions;
+import java.io.File;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigResolveOptions;
 
 /**
  * Application's bootstrap class.
@@ -17,13 +18,24 @@ import java.io.File;
  */
 public class Bootstrap {
 
+    static {
+        System.setProperty("org.slf4j.simpleLogger.logFile", "System.out");
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "debug");
+        System.setProperty("org.slf4j.simpleLogger.showThreadName", "false");
+        System.setProperty("org.slf4j.simpleLogger.showLogName", "false");
+        System.setProperty("org.slf4j.simpleLogger.showShortLogName", "false");
+    }
+
     private static Logger LOGGER = LoggerFactory.getLogger(Bootstrap.class);
 
     /**
      * Load application's configuration from file.
      *
-     * <p>Configuration file is specified by system environment {@code config.file}. If not
-     * specified, default configuration file {@code conf/application.conf} will be used.</p>
+     * <p>
+     * Configuration file is specified by system environment
+     * {@code config.file}. If not specified, default configuration file
+     * {@code conf/application.conf} will be used.
+     * </p>
      *
      * @return
      */

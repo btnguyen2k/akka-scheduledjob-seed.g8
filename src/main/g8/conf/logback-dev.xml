@@ -14,7 +14,4 @@
     <root level="INFO">
         <appender-ref ref="ASYNC_CONSOLE" />
     </root>
-    
-    <logger name="gearman" level="WARN" />
-    <logger name="job-handler" level="DEBUG" />
 </configuration>

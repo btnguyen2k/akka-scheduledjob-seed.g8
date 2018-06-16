@@ -3,6 +3,9 @@ package com.github.btnguyen2k.akkascheduledjob.samples;
 import java.util.Date;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.ddth.akka.scheduling.BaseWorker;
 import com.github.ddth.akka.scheduling.TickMessage;
 import com.github.ddth.akka.scheduling.WorkerCoordinationPolicy;
@@ -20,7 +23,7 @@ import com.github.ddth.commons.utils.DateFormatUtils;
 
 @Scheduling(value = "*/3 * *", workerCoordinationPolicy = WorkerCoordinationPolicy.LOCAL_SINGLETON)
 public class LocalSingletonWorker extends BaseWorker {
-
+    private final Logger LOGGER = LoggerFactory.getLogger(LocalSingletonWorker.class);
     private Random RAND = new Random(System.currentTimeMillis());
 
     @Override
@@ -31,7 +34,7 @@ public class LocalSingletonWorker extends BaseWorker {
          */
 
         Date now = new Date();
-        System.out.println("{" + getActorPath().name() + "}: " + tick.getId() + " / "
+        LOGGER.info("{" + getActorPath().name() + "}: " + tick.getId() + " / "
                 + DateFormatUtils.toString(now, DateFormatUtils.DF_ISO8601) + " / "
                 + DateFormatUtils.toString(tick.getTimestamp(), DateFormatUtils.DF_ISO8601) + " / "
                 + (now.getTime() - tick.getTimestamp().getTime()));
