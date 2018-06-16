@@ -1,5 +1,12 @@
 # Release Notes
 
+## 2018-06-16: template-v0.1.2.1
+
+- Migrate to `ddth-akka:0.1.2`.
+- Config `ddth-akka-scheduling.workers` has simpler format: `<fully-qualified-class-name>[;actor-name;dlock-name]`
+- `RegistryGlobal.initWorkers()` updated to work with `ddth-akka-scheduling.workers`' new format.
+
+
 ## 2018-06-04: template-v0.1.2
 
 - Migrate to `ddth-akka:0.1.1.2`.

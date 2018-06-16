@@ -13,7 +13,6 @@ import com.github.ddth.akka.scheduling.BaseWorker;
 import com.github.ddth.akka.scheduling.TickMessage;
 import com.github.ddth.akka.scheduling.WorkerCoordinationPolicy;
 import com.github.ddth.akka.scheduling.annotation.Scheduling;
-import com.github.ddth.dlock.IDLock;
 
 /**
  * Execute task every 2 secs. Global singleton: once worker takes a task, all of
@@ -24,7 +23,7 @@ import com.github.ddth.dlock.IDLock;
  * @since template-0.1.2
  */
 
-@Scheduling(value = "*/3 * *", getWorkerCoordinationPolicy = WorkerCoordinationPolicy.GLOBAL_SINGLETON)
+@Scheduling(value = "*/5 * *", workerCoordinationPolicy = WorkerCoordinationPolicy.GLOBAL_SINGLETON)
 public class GlobalSingletonWorker extends BaseWorker {
 
     private final Logger LOGGER = LoggerFactory.getLogger(GlobalSingletonWorker.class);
@@ -38,7 +37,7 @@ public class GlobalSingletonWorker extends BaseWorker {
         return UUID.randomUUID().toString();
     }
 
-    private AtomicLong COUNTER_TASK = new AtomicLong(0), COUNTER_BUSY = new AtomicLong(0);
+    private AtomicLong COUNTER_EXEC = new AtomicLong(0), COUNTER_BUSY = new AtomicLong(0);
 
     /**
      * {@inheritDoc}
@@ -48,27 +47,18 @@ public class GlobalSingletonWorker extends BaseWorker {
         COUNTER_BUSY.incrementAndGet();
     }
 
-    public GlobalSingletonWorker(IDLock dlock, long dlockTimeMs) {
-        super(dlock, dlockTimeMs);
-    }
-
     @Override
     protected void doJob(String dlockId, TickMessage tick) throws InterruptedException {
         Date now = new Date();
         try {
-            COUNTER_TASK.incrementAndGet();
-            // LOGGER.info("{" + self().path() + "}: " + tick.getId() + " / "
-            // + DateFormatUtils.toString(now, DateFormatUtils.DF_ISO8601) + " /
-            // "
-            // + DateFormatUtils.toString(tick.getTimestamp(),
-            // DateFormatUtils.DF_ISO8601)
-            // + " / " + (now.getTime() - tick.getTimestamp().getTime()));
+            long numExec = COUNTER_EXEC.incrementAndGet();
+            long numBusy = COUNTER_BUSY.get();
+            long numTotal = numBusy + numExec;
+            LOGGER.info("\t{" + getActorPath().name() + "} " + numExec + " / " + numBusy + " / "
+                    + Math.round(numExec * 100.0 / numTotal));
+
             int sleepMs = 1400 + RAND.nextInt(1000);
             Thread.sleep(sleepMs);
-            long numTask = COUNTER_TASK.get();
-            long numBusy = COUNTER_BUSY.get();
-            LOGGER.info("\t{" + self().path() + "} " + numTask + " / " + numBusy + " / "
-                    + (numTask * 100.0 / (numTask + numBusy)));
         } finally {
             if (!StringUtils.isBlank(dlockId)
                     && System.currentTimeMillis() - now.getTime() > 1000) {

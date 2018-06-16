@@ -1,6 +1,7 @@
 package com.github.btnguyen2k.akkascheduledjob;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
@@ -8,13 +9,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.ddth.akka.AkkaUtils;
 import com.github.ddth.akka.scheduling.tickfanout.MultiNodePubSubBasedTickFanOutActor;
 import com.github.ddth.akka.scheduling.tickfanout.SingleNodeTickFanOutActor;
+import com.github.ddth.commons.utils.ReflectionUtils;
 import com.github.ddth.commons.utils.TypesafeConfigUtils;
 import com.github.ddth.commons.utils.ValueUtils;
 import com.github.ddth.dlock.IDLock;
@@ -28,6 +29,7 @@ import com.github.ddth.pubsub.impl.universal.idint.UniversalInmemPubSubHub;
 import com.github.ddth.pubsub.impl.universal.idint.UniversalRedisPubSubHub;
 import com.typesafe.config.Config;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
@@ -286,20 +288,13 @@ public class RegistryGlobal {
         }
     }
 
-    private static Constructor<?> getConstructor(Class<?> clazz, Class<?>... parameterTypes) {
-        try {
-            return clazz.getConstructor(parameterTypes);
-        } catch (NoSuchMethodException | SecurityException e) {
-            return null;
-        }
-    }
-
     /**
      * Initialize workers.
      *
      * @param config
      * @param actorSystem
      */
+    @SuppressWarnings("unchecked")
     private static void initWorkers(Config config, ActorSystem actorSystem) {
         List<String> workerClazzs = TypesafeConfigUtils
                 .getStringListOptional(config, "ddth-akka-scheduling.workers")
@@ -309,24 +304,34 @@ public class RegistryGlobal {
             for (String cl : workerClazzs) {
                 String[] tokens = cl.trim().split("[,; ]+");
                 String clazzName = tokens[0];
-                String actorName = tokens.length > 1 ? tokens[1] : null;
-                String dlockName = tokens.length > 2 ? tokens[2] : null;
-                String dlockTimeMsStr = tokens.length > 3 ? tokens[3] : null;
                 try {
-                    Class<?> clazz = Class.forName(clazzName);
-                    Props props = null;
-                    Constructor<?> constructor = getConstructor(clazz, IDLock.class, Long.class);
-                    if (constructor == null) {
-                        constructor = getConstructor(clazz, IDLock.class, long.class);
-                    }
+                    Class<Actor> clazz = (Class<Actor>) Class.forName(clazzName);
+                    String actorName = tokens.length > 1 ? tokens[1] : clazz.getSimpleName();
+                    String dlockName = tokens.length > 2 ? tokens[2] : clazz.getSimpleName();
+                    LOGGER.info("Creating worker [" + clazzName + "] with name [" + actorName
+                            + "] and dlock-name [" + dlockName + "]...");
+                    IDLock dlock = dlockFactory != null && !StringUtils.isBlank(dlockName)
+                            ? dlockFactory.createLock(dlockName) : null;
+                    Props props;
+                    Constructor<?> constructor = ReflectionUtils.getConstructor(clazz,
+                            IDLock.class);
                     if (constructor != null) {
-                        IDLock dlock = dlockFactory != null && !StringUtils.isBlank(dlockName)
-                                ? dlockFactory.createLock(dlockName) : null;
-                        long dlockTimeMs = NumberUtils.toLong(dlockTimeMsStr,
-                                IDLock.DEFAULT_LOCK_DURATION_MS);
-                        props = Props.create(clazz, dlock, dlockTimeMs);
+                        props = Props.create(clazz, dlock);
                     } else {
-                        props = Props.create(clazz);
+                        props = Props.create(clazz, () -> {
+                            Actor actor = clazz.newInstance();
+                            Method m = ReflectionUtils.getMethod("setLock", clazz, IDLock.class);
+                            if (m == null) {
+                                m = ReflectionUtils.getMethod("setDlock", clazz, IDLock.class);
+                            }
+                            if (m == null) {
+                                m = ReflectionUtils.getMethod("setDLock", clazz, IDLock.class);
+                            }
+                            if (m != null) {
+                                m.invoke(actor, dlock);
+                            }
+                            return actor;
+                        });
                     }
                     if (StringUtils.isBlank(actorName)) {
                         LOGGER.info("Created worker " + actorSystem.actorOf(props));
@@ -334,7 +339,7 @@ public class RegistryGlobal {
                         LOGGER.info("Created worker " + actorSystem.actorOf(props, actorName));
                     }
                 } catch (ClassNotFoundException cnfe) {
-                    LOGGER.error("Error: Class [" + cl + "] not found!", cnfe);
+                    LOGGER.error("Error: Class [" + clazzName + "] not found!", cnfe);
                 }
             }
         } else {

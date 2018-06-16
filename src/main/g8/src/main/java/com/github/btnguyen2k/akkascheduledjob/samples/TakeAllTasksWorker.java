@@ -15,7 +15,7 @@ import com.github.ddth.commons.utils.DateFormatUtils;
  * @since template-0.1.2
  */
 
-@Scheduling(value = "*/5 * *", getWorkerCoordinationPolicy = WorkerCoordinationPolicy.TAKE_ALL_TASKS)
+@Scheduling(value = "*/5 * *", workerCoordinationPolicy = WorkerCoordinationPolicy.TAKE_ALL_TASKS)
 public class TakeAllTasksWorker extends BaseWorker {
     @Override
     protected void doJob(String lockId, TickMessage tick) {
@@ -24,7 +24,7 @@ public class TakeAllTasksWorker extends BaseWorker {
          */
 
         Date now = new Date();
-        System.out.println("{" + self().path() + "}: " + tick.getId() + " / "
+        System.out.println("{" + getActorPath().name() + "}: " + tick.getId() + " / "
                 + DateFormatUtils.toString(now, DateFormatUtils.DF_ISO8601) + " / "
                 + DateFormatUtils.toString(tick.getTimestamp(), DateFormatUtils.DF_ISO8601) + " / "
                 + (now.getTime() - tick.getTimestamp().getTime()));

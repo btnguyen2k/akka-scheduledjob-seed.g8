@@ -36,7 +36,7 @@ dockerCommands := Seq(
     Cmd("FROM"          , "openjdk:8-jre-alpine"),
     Cmd("LABEL"         , "maintainer=\"$app_author$\""),
     Cmd("ADD"           , "opt /opt"),
-    Cmd("RUN"           , "apk add --no-cache -U tzdata bash && ln -s /opt/docker /opt/" + appName + " && chown -R daemon:daemon /opt"),
+    Cmd("RUN"           , "apk add --no-cache -U tzdata bash && ln -s /opt/docker /opt/" + appName + " && chown -R daemon:daemon /opt && chmod 755 /opt/docker/conf/*.sh && chmod 755 /opt/docker/bin/*"),
     Cmd("RUN"           , "cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime"),
     Cmd("WORKDIR"       , "/opt/" + appName),
     Cmd("USER"          , "daemon"),
@@ -59,11 +59,11 @@ EclipseKeys.executionEnvironment         := Some(EclipseExecutionEnvironment.Jav
 
 /* Dependencies */
 val _slf4jVersion       = "1.7.25"
-val _ddthCommonsVersion = "0.9.1.4"
-val _ddthAkkaVersion    = "0.1.1.2"
-val _ddthDlockVersion   = "0.1.1.2"
-val _ddthQueueVersion   = "0.7.1"
-val _akkaVersion        = "2.5.12"
+val _ddthCommonsVersion = "0.9.1.5"
+val _ddthAkkaVersion    = "0.1.2"
+val _ddthDlockVersion   = "0.1.2"
+val _ddthQueueVersion   = "0.7.1.1"
+val _akkaVersion        = "2.5.13"
 
 libraryDependencies ++= Seq(
     "com.typesafe.akka"          %% "akka-actor"                  % _akkaVersion
@@ -71,17 +71,16 @@ libraryDependencies ++= Seq(
    ,"org.slf4j"                  % "slf4j-api"                    % _slf4jVersion
    ,"org.slf4j"                  % "log4j-over-slf4j"             % _slf4jVersion
    ,"ch.qos.logback"             % "logback-classic"              % "1.2.3"
-
+   
+   ,"com.zaxxer"                 % "HikariCP"                     % "3.2.0"
    ,"org.apache.commons"         % "commons-lang3"                % "3.7"
-   ,"io.undertow"                % "undertow-core"                % "2.0.6.Final"
 
-   ,"com.zaxxer"                 % "HikariCP"                     % "3.1.0"
-
+   ,"com.github.ddth"            % "ddth-akka-core"               % _ddthAkkaVersion
    ,"com.github.ddth"            % "ddth-dlock-core"              % _ddthDlockVersion
    ,"com.github.ddth"            % "ddth-dlock-redis"             % _ddthDlockVersion
    ,"com.github.ddth"            % "ddth-queue-core"              % _ddthQueueVersion
    ,"com.github.ddth"            % "ddth-queue-redis"             % _ddthQueueVersion
-   ,"com.github.ddth"            % "ddth-akka-core"               % _ddthAkkaVersion
+
    ,"com.github.ddth"            % "ddth-commons-core"            % _ddthCommonsVersion
    ,"com.github.ddth"            % "ddth-commons-typesafeconfig"  % _ddthCommonsVersion
 )

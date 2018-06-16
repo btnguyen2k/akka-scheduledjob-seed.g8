@@ -18,7 +18,7 @@ import com.github.ddth.commons.utils.DateFormatUtils;
  * @since template-0.1.2
  */
 
-@Scheduling(value = "*/3 * *", getWorkerCoordinationPolicy = WorkerCoordinationPolicy.LOCAL_SINGLETON)
+@Scheduling(value = "*/3 * *", workerCoordinationPolicy = WorkerCoordinationPolicy.LOCAL_SINGLETON)
 public class LocalSingletonWorker extends BaseWorker {
 
     private Random RAND = new Random(System.currentTimeMillis());
@@ -31,7 +31,7 @@ public class LocalSingletonWorker extends BaseWorker {
          */
 
         Date now = new Date();
-        System.out.println("{" + self().path() + "}: " + tick.getId() + " / "
+        System.out.println("{" + getActorPath().name() + "}: " + tick.getId() + " / "
                 + DateFormatUtils.toString(now, DateFormatUtils.DF_ISO8601) + " / "
                 + DateFormatUtils.toString(tick.getTimestamp(), DateFormatUtils.DF_ISO8601) + " / "
                 + (now.getTime() - tick.getTimestamp().getTime()));
