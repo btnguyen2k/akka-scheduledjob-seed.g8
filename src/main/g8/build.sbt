@@ -59,7 +59,7 @@ EclipseKeys.executionEnvironment         := Some(EclipseExecutionEnvironment.Jav
 
 /* Dependencies */
 val _slf4jVersion       = "1.7.25"
-val _ddthCommonsVersion = "0.9.1.5"
+val _ddthCommonsVersion = "0.9.1.6"
 val _ddthAkkaVersion    = "0.1.2"
 val _ddthDlockVersion   = "0.1.2"
 val _ddthQueueVersion   = "0.7.1.1"

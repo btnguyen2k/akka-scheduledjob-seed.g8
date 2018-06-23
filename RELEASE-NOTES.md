@@ -1,5 +1,11 @@
 # Release Notes
 
+## 2018-06-22: template-v0.1.2.2
+
+- Upgrade `ddth-commons` to `v0.9.1.6`.
+- `DataSourcesBootstrapper`: accept new optional config `jdbc-driver`
+
+
 ## 2018-06-16: template-v0.1.2.1
 
 - Migrate to `ddth-akka:0.1.2`.

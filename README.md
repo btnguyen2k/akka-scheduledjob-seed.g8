@@ -8,7 +8,7 @@ To create a new project from template:
 sbt new btnguyen2k/akka-scheduledjob-seed.g8
 ```
 
-Latest release: [template-v0.1.2.1](RELEASE-NOTES.md).
+Latest release: [template-v0.1.2.2](RELEASE-NOTES.md).
 
 ## Features
 
