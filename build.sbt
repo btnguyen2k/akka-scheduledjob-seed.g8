@@ -60,13 +60,19 @@ EclipseKeys.executionEnvironment         := Some(EclipseExecutionEnvironment.Jav
 /* Dependencies */
 val _slf4jVersion       = "1.7.25"
 val _ddthCommonsVersion = "0.9.1.6"
-val _ddthAkkaVersion    = "0.1.2"
+val _ddthAkkaVersion    = "0.1.3"
 val _ddthDlockVersion   = "0.1.2"
 val _ddthQueueVersion   = "0.7.1.2"
 val _akkaVersion        = "2.5.13"
 
 libraryDependencies ++= Seq(
     "com.typesafe.akka"          %% "akka-actor"                  % _akkaVersion
+
+    // for cluster mode
+   //,"com.typesafe.akka"          %% "akka-cluster"                % _akkaVersion
+   //,"com.typesafe.akka"          %% "akka-distributed-data"       % _akkaVersion
+   //,"com.typesafe.akka"          %% "akka-cluster-metrics"        % _akkaVersion
+   //,"com.typesafe.akka"          %% "akka-cluster-tools"          % _akkaVersion
 
    ,"org.slf4j"                  % "slf4j-api"                    % _slf4jVersion
    ,"org.slf4j"                  % "log4j-over-slf4j"             % _slf4jVersion

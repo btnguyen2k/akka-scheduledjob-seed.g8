@@ -30,46 +30,67 @@ app {
     version   = "0.1.0"
     name      = "application-name-in-lower-cases-without-special-characterss"
     shortname = "app_short_name"
-    fullname  = ${app.name} ${app.version}
+    fullname  = \${app.name} \${app.version}
     desc      = "Application description, free text"
+}
+```
+
+```
+## Datasource configurations
+datasources {
+    # Name of the datasource, in this case it's "default"
+    default {
+        jdbc-url      = \${JDBC_URL}
+        jdbc-username = \${JDBC_USERNAME}
+        jdbc-password = \${JDBC_PASSWORD}
+    }
+    
+    # Another datasource
+    my-log-datasource {
+        jdbc-url      = "jdbc:mysql://localhost:3306/test"
+        jdbc-username = "test"
+        jdbc-password = "test"
+    }
 }
 ```
 
 ```
 ## ddth-akka-scheduling configurations
 ddth-akka-scheduling {
-    # set to "true" to enable multi-mode, "false" otherwise
-    multi-node-mode     = true
+    # Scheduling mode: "single-node", "multi-node" or "cluster"
+    # If mode is "cluster", akka must run in cluster mode
+    mode = "multi-node"
 
-    # multi-node mode: d-lock time in milliseconds
-    dlock-time-ms       = 5000
+    # multi-node mode: distributed-lock time in milliseconds
+    dlock-time-ms = 5000
 
-    # multi-node mode: sleep time between queue poll in milliseconds
-    queue-poll-sleep-ms = 1000
-
-    # used in multi-mode only
+    # multi-node mode: distributed-lock backend configurations
     dlock-backend {
-        # either "local" or "redis", "local" type has no more settings
+        # either "local" or "redis"
         type                = "redis"
-        lock-name           = "akka-scheduled-job"
+        lock-prefix         = \${app.shortname}
+        lock-name           = "tick-fan-out"
         # redis settings
         redis-host-and-port = "localhost:6379"
         redis-password      = ""
     }
 
-    # used in multi-mode only
-    queue-backend {
-        # either "local" or "redis", "local" type has no more settings
+    # pub-sub backend configurations
+    pubsub-backend {
+        # either "local" or "redis"
         type                = "redis"
-        queue-name          = "akka-scheduled-job"
+        channel-name        = \${app.shortname}
         # redis settings
         redis-host-and-port = "localhost:6379"
         redis-password      = ""
     }
 
-    # list of workers, fully qualified class names
+    # List of workers, format: <fully-qualified-class-name>[;actor-name;dlock-name]
+    # If actor-name or dlock-name is not supplied, use class' simple-name as actor-name & dlock-name
     workers = [
-        com.github.btnguyen2k.akkascheduledjob.samples.DummyWorker
+        com.github.btnguyen2k.akkascheduledjob.samples.TakeAllTasksWorker;taks-all-tasks
+        com.github.btnguyen2k.akkascheduledjob.samples.LocalSingletonWorker
+        com.github.btnguyen2k.akkascheduledjob.samples.GlobalSingletonWorker;global-singleton;global-singleton-lock
     ]
 }
 ```

@@ -8,7 +8,7 @@ To create a new project from template:
 sbt new btnguyen2k/akka-scheduledjob-seed.g8
 ```
 
-Latest release: [template-v0.1.2.2](RELEASE-NOTES.md).
+Latest release: [template-v0.2.0](RELEASE-NOTES.md).
 
 ## Features
 
@@ -17,7 +17,10 @@ Latest release: [template-v0.1.2.2](RELEASE-NOTES.md).
   - `sbt run`: run project (for development)
   - `sbt universal:packageBin`: package project as a `.zip` file
   - `sbt docker:publishLocal`: package project as docker image and publish to local
-- Support multi-node mode (require Redis server)
+- Supported mode:
+  - Single node
+  - Multi-node (require Redis server)
+  - Cluster (since [template-v0.2.0](RELEASE-NOTES.md)).
 - Bootstrappers (since [template-v0.1.1](RELEASE-NOTES.md)).
 - Built-in bootstrapper to bootstrap `javax.sql.DataSource` (see [`com.github.btnguyen2k.akkascheduledjob.bootstrap.DataSourcesBootstrapper`](src/main/java/com/github/btnguyen2k/akkascheduledjob/bootstrap/DataSourcesBootstrapper.java)
 - Samples worker implementations (see [`com.github.btnguyen2k.akkascheduledjob.samples`](src/main/java/com/github/btnguyen2k/akkascheduledjob/samples)
@@ -50,10 +53,11 @@ bootstrappers = [
 datasources {
     # Name of the datasource, in this case it's "default"
     default {
-        jdbc-url      = "${JDBC_URL}"
-        jdbc-username = "${JDBC_USERNAME}"
-        jdbc-password = "${JDBC_PASSWORD}"
+        jdbc-url      = ${JDBC_URL}
+        jdbc-username = ${JDBC_USERNAME}
+        jdbc-password = ${JDBC_PASSWORD}
     }
+    
     # Another datasource
     my-log-datasource {
         jdbc-url      = "jdbc:mysql://localhost:3306/test"
@@ -66,13 +70,14 @@ datasources {
 ```
 ## ddth-akka-scheduling configurations
 ddth-akka-scheduling {
-    # set to "true" to enable multi-mode, "false" otherwise
-    multi-node-mode     = true
+    # Scheduling mode: "single-node", "multi-node" or "cluster"
+    # If mode is "cluster", akka must run in cluster mode
+    mode = "multi-node"
 
-    # multi-node mode: d-lock time in milliseconds
-    dlock-time-ms       = 5000
+    # multi-node mode: distributed-lock time in milliseconds
+    dlock-time-ms = 5000
 
-    # used in multi-mode only
+    # multi-node mode: distributed-lock backend configurations
     dlock-backend {
         # either "local" or "redis"
         type                = "redis"
@@ -83,7 +88,7 @@ ddth-akka-scheduling {
         redis-password      = ""
     }
 
-    # used in multi-mode only
+    # pub-sub backend configurations
     pubsub-backend {
         # either "local" or "redis"
         type                = "redis"
@@ -93,11 +98,12 @@ ddth-akka-scheduling {
         redis-password      = ""
     }
 
-    # list of workers, format: <fully-qualified-class-name>[;actor-name;dlock-name;dlock-time-ms]
+    # List of workers, format: <fully-qualified-class-name>[;actor-name;dlock-name]
+    # If actor-name or dlock-name is not supplied, use class' simple-name as actor-name & dlock-name
     workers = [
-        com.github.btnguyen2k.akkascheduledjob.samples.TakeAllTasksWorker;TakeAllTasks
-        com.github.btnguyen2k.akkascheduledjob.samples.LocalSingletonWorker;LocalSingletonWorker
-        com.github.btnguyen2k.akkascheduledjob.samples.GlobalSingletonWorker;GlobalSingletonWorker;GlobalSingletonWorker;5000
+        com.github.btnguyen2k.akkascheduledjob.samples.TakeAllTasksWorker;taks-all-tasks
+        com.github.btnguyen2k.akkascheduledjob.samples.LocalSingletonWorker
+        com.github.btnguyen2k.akkascheduledjob.samples.GlobalSingletonWorker;global-singleton;global-singleton-lock
     ]
 }
 ```

@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2018-07-02: template-v0.2.0
+
+- Upgrade `ddth-akka` to `v0.1.3`
+- `RegisterGlobal`:
+  - Support new configuration: cluster mode
+  - `application.conf` changes to support cluster mode
+
+
 ## 2018-06-22: template-v0.1.2.2
 
 - Upgrade `ddth-commons` to `v0.9.1.6`.

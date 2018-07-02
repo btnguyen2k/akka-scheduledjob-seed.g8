@@ -1,18 +1,12 @@
 package com.github.btnguyen2k.akkascheduledjob;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import akka.actor.Actor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import com.github.ddth.akka.AkkaUtils;
+import com.github.ddth.akka.cluster.MasterActor;
+import com.github.ddth.akka.cluster.scheduling.ClusterTickFanOutActor;
 import com.github.ddth.akka.scheduling.tickfanout.MultiNodePubSubBasedTickFanOutActor;
 import com.github.ddth.akka.scheduling.tickfanout.SingleNodeTickFanOutActor;
 import com.github.ddth.commons.utils.ReflectionUtils;
@@ -28,11 +22,17 @@ import com.github.ddth.pubsub.impl.AbstractPubSubHub;
 import com.github.ddth.pubsub.impl.universal.idint.UniversalInmemPubSubHub;
 import com.github.ddth.pubsub.impl.universal.idint.UniversalRedisPubSubHub;
 import com.typesafe.config.Config;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import akka.actor.Actor;
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Application's global registry.
@@ -46,8 +46,7 @@ public class RegistryGlobal {
     private final static Stack<Runnable> shutdownHooks = new Stack<>();
 
     /**
-     * Add a shutdown hook, which to be called right before application's
-     * shutdown.
+     * Add a shutdown hook, which to be called right before application's shutdown.
      *
      * @param r
      */
@@ -63,8 +62,8 @@ public class RegistryGlobal {
      * Remove an item from application's global storage.
      *
      * @param key
-     * @return the previous value associated with {@code key}, or {@code null}
-     *         if there was no mapping for {@code key}.
+     * @return the previous value associated with {@code key}, or {@code null} if there was no
+     * mapping for {@code key}.
      */
     public static Object removeFromGlobalStorage(String key) {
         return globalStorage.remove(key);
@@ -75,8 +74,8 @@ public class RegistryGlobal {
      *
      * @param key
      * @param value
-     * @return the previous value associated with {@code key}, or {@code null}
-     *         if there was no mapping for {@code key}.
+     * @return the previous value associated with {@code key}, or {@code null} if there was no
+     * mapping for {@code key}.
      */
     public static Object putToGlobalStorage(String key, Object value) {
         if (value == null) {
@@ -140,7 +139,9 @@ public class RegistryGlobal {
      * @return
      */
     private static ActorSystem buildActorSystem(Config config) {
-        ActorSystem actorSystem = AkkaUtils.createActorSystem("default", config);
+        String actorSystemName = TypesafeConfigUtils
+                .getStringOptional(config, "akka_actor_system_name").orElse("default");
+        ActorSystem actorSystem = AkkaUtils.createActorSystem(actorSystemName, config);
         addShutdownHook(() -> actorSystem.terminate());
         LOGGER.info("Actor system: " + actorSystem);
         return actorSystem;
@@ -158,9 +159,8 @@ public class RegistryGlobal {
                     .getStringOptional(config, "ddth-akka-scheduling.dlock-backend.type")
                     .orElse(null);
             if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-                String redisHostAndPort = TypesafeConfigUtils
-                        .getStringOptional(config,
-                                "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
+                String redisHostAndPort = TypesafeConfigUtils.getStringOptional(config,
+                        "ddth-akka-scheduling.dlock-backend.redis-host-and-port")
                         .orElse("localhost:6379");
                 String redisPassword = TypesafeConfigUtils.getStringOptional(config,
                         "ddth-akka-scheduling.dlock-backend.redis-password").orElse(null);
@@ -179,7 +179,6 @@ public class RegistryGlobal {
     }
 
     /**
-     * 
      * @param config
      * @return
      * @since 0.1.2
@@ -193,9 +192,8 @@ public class RegistryGlobal {
                     .orElse(null);
             AbstractPubSubHub<?, byte[]> hub;
             if (StringUtils.equalsAnyIgnoreCase("redis", type)) {
-                String redisHostAndPort = TypesafeConfigUtils
-                        .getStringOptional(config,
-                                "ddth-akka-scheduling.pubsub-backend.redis-host-and-port")
+                String redisHostAndPort = TypesafeConfigUtils.getStringOptional(config,
+                        "ddth-akka-scheduling.pubsub-backend.redis-host-and-port")
                         .orElse("localhost:6379");
                 String redisPassword = TypesafeConfigUtils.getStringOptional(config,
                         "ddth-akka-scheduling.pubsub-backend.redis-password").orElse(null);
@@ -223,14 +221,18 @@ public class RegistryGlobal {
         if (!config.hasPath("ddth-akka-scheduling")) {
             throw new RuntimeException("No configuration [ddth-akka-scheduling] found!");
         }
-        boolean isMultiNodeMode = TypesafeConfigUtils
-                .getBooleanOptional(config, "ddth-akka-scheduling.multi-node-mode")
-                .orElse(Boolean.FALSE).booleanValue();
+        String mode = TypesafeConfigUtils.getStringOptional(config, "ddth-akka-scheduling.mode")
+                .orElse("single-node");
         ActorRef tickFanOut;
-        if (!isMultiNodeMode) {
-            // single-node mode
-            tickFanOut = SingleNodeTickFanOutActor.newInstance(actorSystem);
-        } else {
+        if (StringUtils.equalsAnyIgnoreCase("cluster", mode)) {
+            // cluster mode
+            tickFanOut = ClusterTickFanOutActor.newInstance(actorSystem);
+
+            /* remember to create one "master" actor instance */
+            MasterActor.newInstance(actorSystem);
+        } else if (StringUtils.equalsAnyIgnoreCase("multi-node", mode) || StringUtils
+                .equalsAnyIgnoreCase("multi-nodes", mode) || StringUtils
+                .equalsAnyIgnoreCase("multiple-nodes", mode)) {
             // multi-node mode
             IDLockFactory dlockFactory = buildDlockFactory(config);
             String dlockName = TypesafeConfigUtils
@@ -248,8 +250,11 @@ public class RegistryGlobal {
                     .getStringOptional(config, "ddth-akka-scheduling.pubsub-backend.channel-name")
                     .orElse("akka-scheduled-jobs");
 
-            tickFanOut = MultiNodePubSubBasedTickFanOutActor.newInstance(actorSystem, dlock,
-                    dlockTimeMs, pubSubHub, channelName);
+            tickFanOut = MultiNodePubSubBasedTickFanOutActor
+                    .newInstance(actorSystem, dlock, dlockTimeMs, pubSubHub, channelName);
+        } else {
+            // single-node mode
+            tickFanOut = SingleNodeTickFanOutActor.newInstance(actorSystem);
         }
         LOGGER.info("Tick fan-out: " + tickFanOut);
         addShutdownHook(() -> actorSystem.stop(tickFanOut));
@@ -272,8 +277,9 @@ public class RegistryGlobal {
                         LOGGER.info("Bootstrapping [" + className + "]...");
                         ((Runnable) clazz.newInstance()).run();
                     } else {
-                        LOGGER.warn("Bootstrapper [" + className + "] must implement ["
-                                + Runnable.class + "]!");
+                        LOGGER.warn(
+                                "Bootstrapper [" + className + "] must implement [" + Runnable.class
+                                        + "]!");
                     }
                 } catch (ClassNotFoundException cnfe) {
                     LOGGER.error("Error: Class [" + className + "] not found!", cnfe);
@@ -310,11 +316,12 @@ public class RegistryGlobal {
                     String dlockName = tokens.length > 2 ? tokens[2] : clazz.getSimpleName();
                     LOGGER.info("Creating worker [" + clazzName + "] with name [" + actorName
                             + "] and dlock-name [" + dlockName + "]...");
-                    IDLock dlock = dlockFactory != null && !StringUtils.isBlank(dlockName)
-                            ? dlockFactory.createLock(dlockName) : null;
+                    IDLock dlock =
+                            dlockFactory != null && !StringUtils.isBlank(dlockName) ? dlockFactory
+                                    .createLock(dlockName) : null;
                     Props props;
-                    Constructor<?> constructor = ReflectionUtils.getConstructor(clazz,
-                            IDLock.class);
+                    Constructor<?> constructor = ReflectionUtils
+                            .getConstructor(clazz, IDLock.class);
                     if (constructor != null) {
                         props = Props.create(clazz, dlock);
                     } else {
